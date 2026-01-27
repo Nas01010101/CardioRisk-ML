@@ -176,7 +176,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # Navigation
-page = st.radio("", ["Study Overview", "Key Findings", "Critical Analysis", "Literature Gaps", "Prediction Tool"], horizontal=True, label_visibility="collapsed")
+page = st.radio("", ["Study Overview", "Key Findings", "Critical Analysis", "Literature Gaps"], horizontal=True, label_visibility="collapsed")
 
 st.divider()
 
@@ -315,77 +315,99 @@ elif page == "Key Findings":
 # ==================== CRITICAL ANALYSIS ====================
 elif page == "Critical Analysis":
     
-    st.markdown('<p class="section-header">Methodological Concerns</p>', unsafe_allow_html=True)
+    st.markdown('<p class="section-header">On the Time Variable</p>', unsafe_allow_html=True)
     
-    # Time variable issue
     st.markdown("""
-    <div class="warning-card">
-        <strong>⚠️ Critical Issue: Time Variable Leakage</strong><br><br>
-        The "time" variable (follow-up period) is highly problematic:
-    </div>
-    """, unsafe_allow_html=True)
+    One aspect of this dataset worth examining is the "time" variable — the follow-up period in days. 
+    I believe it may introduce data leakage when used as a classification feature. Here's my reasoning:
+    """)
+    
+    st.markdown('<p class="section-header">The Thesis</p>', unsafe_allow_html=True)
+    
+    st.markdown(f"""
+    The "time" variable records how long each patient was observed. In this dataset:
+    
+    - Correlation between time and death: **{df['time'].corr(df['DEATH_EVENT']):.2f}**
+    - Mean follow-up for survivors: **{df[df.DEATH_EVENT==0]['time'].mean():.0f} days**
+    - Mean follow-up for deceased: **{df[df.DEATH_EVENT==1]['time'].mean():.0f} days**
+    
+    Patients who died have shorter follow-up periods. If a patient dies early, their observation ends early. 
+    This makes "time" more of a consequence of the outcome than a predictor of it.
+    """)
+    
+    st.markdown('<p class="section-header">Supporting Evidence</p>', unsafe_allow_html=True)
     
     col1, col2 = st.columns(2)
+    
     with col1:
-        st.markdown("**The Problem:**")
+        st.markdown("**Model Performance Comparison:**")
         st.markdown(f"""
-        - Correlation with death: **{df['time'].corr(df['DEATH_EVENT']):.2f}**
-        - Mean time (survivors): **{df[df.DEATH_EVENT==0]['time'].mean():.0f} days**
-        - Mean time (deceased): **{df[df.DEATH_EVENT==1]['time'].mean():.0f} days**
+        | Model | With Time | Without Time |
+        |-------|-----------|-------------|
+        | Logistic | {results_full['Logistic Regression']['auc']:.3f} | {results_no_time['Logistic Regression']['auc']:.3f} |
+        | Random Forest | {results_full['Random Forest']['auc']:.3f} | {results_no_time['Random Forest']['auc']:.3f} |
+        | XGBoost | {results_full['XGBoost']['auc']:.3f} | {results_no_time['XGBoost']['auc']:.3f} |
         
-        Patients who died have shorter follow-up *by definition*. This is not a predictive feature — it's a consequence of the outcome.
-        
-        **Supporting literature:**
-        - Kaufman et al. (2012): "Leakage in Data Mining" — features correlated with outcome timing cause inflated performance
-        - Kapoor & Narayanan (2022): "Leakage and the Reproducibility Crisis in ML-based Science" — identifies time-related leakage as common issue
+        The drop in AUC when removing time suggests the models 
+        were partially relying on this variable.
         """)
     
     with col2:
-        st.markdown("**Impact on Results:**")
-        st.markdown(f"""
-        Including time inflates model performance:
-        
-        | Model | AUC (with time) | AUC (without) |
-        |-------|-----------------|---------------|
-        | Logistic | {results_full['Logistic Regression']['auc']:.2f} | {results_no_time['Logistic Regression']['auc']:.2f} |
-        | Random Forest | {results_full['Random Forest']['auc']:.2f} | {results_no_time['Random Forest']['auc']:.2f} |
-        | XGBoost | {results_full['XGBoost']['auc']:.2f} | {results_no_time['XGBoost']['auc']:.2f} |
+        st.markdown("**References:**")
+        st.markdown("""
+        - [Original paper](https://bmcmedinformdecismak.biomedcentral.com/articles/10.1186/s12911-020-1023-5): 
+          The authors ran analyses both with and without the time variable
+        - [UCI Dataset](https://archive.ics.uci.edu/dataset/519/heart+failure+clinical+records): 
+          Documents "time" as "follow-up period (days)"
+        - [Kaggle Discussion](https://www.kaggle.com/datasets/rabieelkharoua/predict-survival-of-patients-with-heart-failure/discussion/498685)
         """)
     
-    st.markdown('<p class="section-header">Additional Limitations</p>', unsafe_allow_html=True)
+    st.markdown("""
+    <div class="reference-box">
+        <strong>From the Kaggle discussion by Rabie El Kharoua:</strong><br><br>
+        <em>"Time is not a Feature, It's a Target. You know, it's super important to recognize that the 'time' column 
+        in our dataset isn't really a feature we should be using in our models. It's actually a target variable. 
+        See, it represents the follow-up period duration... Time and Death_Event go hand in hand. Yep, they're 
+        pretty much like two peas in a pod. The 'time' column is closely tied to the 'DEATH_EVENT' column because 
+        when an event happens, it affects the time. Using time as a feature could cause some serious bias in our 
+        predictions... At the end of the day, we want our models to make accurate predictions, right? So, instead 
+        of focusing on time, let's turn our attention to other features that are available at the time of prediction."</em>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    st.markdown('<p class="section-header">Where I Could Be Wrong</p>', unsafe_allow_html=True)
     
     st.markdown("""
-    **1. Sample Size (N=299)**
-    - Insufficient for reliable generalization
-    - Cross-validation shows high variance (±0.10-0.19 in AUC)
-    - Risk of overfitting, especially for complex models
+    This interpretation may not be the only valid one:
     
-    **2. Single-Center Data**
-    - Collected from Faisalabad Institute of Cardiology, Pakistan
-    - Population-specific factors may not transfer to other demographics
-    - No external validation cohort
+    **1. Alternative interpretation of "time"**
     
-    **3. Class Imbalance Handling**
-    - 32% mortality rate is moderate but still imbalanced
-    - Original study doesn't discuss SMOTE, class weights, or threshold optimization
+    It's possible "time" represents a *scheduled* follow-up interval (e.g., 30-day vs 90-day checkup protocol) 
+    rather than the actual observed time-to-event. If patients were assigned to different monitoring schedules, 
+    this would be a legitimate baseline feature. The dataset documentation is ambiguous on this point.
     
-    **4. Missing Clinical Context**
-    - No information on treatment protocols
-    - No baseline risk stratification (NYHA class, NT-proBNP)
-    - No competing risks analysis
+    **2. Survival analysis handles time differently**
     
-    **5. Temporal Validation**
-    - No train/test split by admission date
-    - Model may not generalize to future patients
+    In Cox regression or Kaplan-Meier analysis, time-to-event is part of the outcome definition, not a feature. 
+    The original paper used stratified logistic regression by month, which partially addresses the issue. 
+    My concern applies specifically to treating time as a classification feature.
+    
+    **3. Different goals: explanation vs. prediction**
+    
+    The original study may have aimed to understand which factors correlate with mortality in a retrospective 
+    cohort (exploratory analysis). My criticism assumes the goal is to build a model that predicts outcomes 
+    for new patients (prospective deployment). Both are valid for different purposes.
     """)
     
-    st.markdown('<p class="section-header">Recommendations for Future Work</p>', unsafe_allow_html=True)
+    st.markdown('<p class="section-header">Other Limitations</p>', unsafe_allow_html=True)
     
     st.markdown("""
-    1. **Remove or properly handle the time variable** — either exclude it or use survival analysis methods (Cox regression)
-    2. **External validation** on datasets from different populations/centers
-    3. **Prospective validation** to assess real-world utility
-    4. **Calibration focus** — well-calibrated probabilities matter more than discrimination in clinical settings
+    Beyond the time variable, there are other considerations:
+    
+    - **Sample size (N=299)**: Small for reliable generalization; cross-validation shows variance of ±0.05 in AUC
+    - **Single center**: Data from Faisalabad Institute of Cardiology; may not transfer to other populations
+    - **No external validation**: Results haven't been tested on independent datasets
+    - **Missing context**: No information on treatments received or NYHA classification
     """)
 
 # ==================== LITERATURE GAPS ====================
@@ -480,85 +502,7 @@ elif page == "Literature Gaps":
     - **Christodoulou, E. et al. (2019)**. A systematic review shows no performance benefit of ML over logistic regression. *JCE*
     """)
 
-# ==================== PREDICTION TOOL ====================
-elif page == "Prediction Tool":
-    
-    st.markdown('<p class="section-header">Individual Risk Assessment</p>', unsafe_allow_html=True)
-    
-    st.markdown("""
-    <div class="disclaimer-box">
-        <strong>For Educational Purposes Only.</strong> This tool demonstrates model predictions and should never be used for actual clinical decisions.
-        Note: This version excludes the "time" variable to avoid information leakage.
-    </div>
-    """, unsafe_allow_html=True)
-    
-    model_choice = st.selectbox("Select Model", list(models_no_time.keys()))
-    
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        st.markdown("**Demographics**")
-        age = st.number_input("Age (years)", 20, 100, 60)
-        sex = st.selectbox("Sex", ["Female", "Male"])
-        
-        st.markdown("**Cardiac Function**")
-        ejection_fraction = st.slider("Ejection Fraction (%)", 10, 80, 38, 
-                                       help="Normal: 55-70%. Below 40% indicates HFrEF.")
-        
-    with col2:
-        st.markdown("**Laboratory Values**")
-        serum_creatinine = st.number_input("Serum Creatinine (mg/dL)", 0.5, 10.0, 1.1, 0.1,
-                                            help="Normal: 0.7-1.2 mg/dL")
-        serum_sodium = st.number_input("Serum Sodium (mEq/L)", 110, 150, 137)
-        creatinine_phosphokinase = st.number_input("CPK (mcg/L)", 20, 8000, 250)
-        platelets = st.number_input("Platelets (kiloplatelets/mL)", 25000, 850000, 260000)
-        
-    with st.expander("Comorbidities"):
-        col3, col4 = st.columns(2)
-        with col3:
-            anaemia = st.checkbox("Anaemia")
-            diabetes = st.checkbox("Diabetes")
-        with col4:
-            high_bp = st.checkbox("High Blood Pressure")
-            smoking = st.checkbox("Smoking")
-    
-    patient_data = pd.DataFrame({
-        'age': [age], 'anaemia': [int(anaemia)], 'creatinine_phosphokinase': [creatinine_phosphokinase],
-        'diabetes': [int(diabetes)], 'ejection_fraction': [ejection_fraction], 
-        'high_blood_pressure': [int(high_bp)], 'platelets': [platelets],
-        'serum_creatinine': [serum_creatinine], 'serum_sodium': [serum_sodium],
-        'sex': [1 if sex == "Male" else 0], 'smoking': [int(smoking)]
-    })
-    
-    if st.button("Calculate Risk", type="primary"):
-        model = models_no_time[model_choice]
-        prob = model.predict_proba(patient_data)[0][1]
-        
-        st.markdown("---")
-        st.markdown(f"### Predicted Mortality Risk: **{prob*100:.1f}%**")
-        
-        if prob < 0.2:
-            st.success("**Low Risk** — Model predicts favorable prognosis.")
-        elif prob < 0.5:
-            st.warning("**Moderate Risk** — Elevated mortality probability.")
-        else:
-            st.error("**High Risk** — Significant mortality probability based on features.")
-        
-        st.markdown("**Key Risk Factors:**")
-        factors = []
-        if ejection_fraction < 40:
-            factors.append(f"• Reduced ejection fraction ({ejection_fraction}%)")
-        if serum_creatinine > 1.5:
-            factors.append(f"• Elevated serum creatinine ({serum_creatinine} mg/dL)")
-        if age > 70:
-            factors.append(f"• Advanced age ({age} years)")
-        if serum_sodium < 135:
-            factors.append(f"• Low serum sodium ({serum_sodium} mEq/L)")
-        if not factors:
-            factors.append("• No major risk factors based on clinical thresholds")
-        st.markdown("\n".join(factors))
-        
-        st.caption(f"Model: {model_choice} (trained without time variable) | AUC: {results_no_time[model_choice]['auc']:.3f}")
+
 
 # Footer
 st.markdown("""
