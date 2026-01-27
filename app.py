@@ -108,31 +108,45 @@ def load_data():
 
 df = load_data()
 
-# Prepare data - WITH and WITHOUT time variable
+# Prepare data
 X_full = df.drop('DEATH_EVENT', axis=1)
 y = df['DEATH_EVENT']
 
-# Single split, then drop time column for no_time version
+# Single split
 X_train_full, X_test_full, y_train, y_test = train_test_split(X_full, y, test_size=0.2, stratify=y, random_state=42)
+
+# Create no-time versions from same split
 X_train_no_time = X_train_full.drop('time', axis=1)
 X_test_no_time = X_test_full.drop('time', axis=1)
 
 @st.cache_resource
-def train_models(_X_train, _y_train):
+def train_models_full():
     models = {
         'Logistic Regression': LogisticRegression(C=1, random_state=42, solver='liblinear', max_iter=1000),
         'Random Forest': RandomForestClassifier(n_estimators=100, max_depth=5, random_state=42),
         'XGBoost': XGBClassifier(n_estimators=100, learning_rate=0.1, max_depth=3, random_state=42, eval_metric='logloss')
     }
+    X_tr, _, y_tr, _ = train_test_split(df.drop('DEATH_EVENT', axis=1), df['DEATH_EVENT'], test_size=0.2, stratify=df['DEATH_EVENT'], random_state=42)
     for model in models.values():
-        model.fit(_X_train, _y_train)
+        model.fit(X_tr, y_tr)
     return models
 
-# Train both versions
-models_full = train_models(X_train_full, y_train)
-models_no_time = train_models(X_train_no_time, y_train)
+@st.cache_resource
+def train_models_no_time():
+    models = {
+        'Logistic Regression': LogisticRegression(C=1, random_state=42, solver='liblinear', max_iter=1000),
+        'Random Forest': RandomForestClassifier(n_estimators=100, max_depth=5, random_state=42),
+        'XGBoost': XGBClassifier(n_estimators=100, learning_rate=0.1, max_depth=3, random_state=42, eval_metric='logloss')
+    }
+    X_tr, _, y_tr, _ = train_test_split(df.drop('DEATH_EVENT', axis=1), df['DEATH_EVENT'], test_size=0.2, stratify=df['DEATH_EVENT'], random_state=42)
+    X_tr = X_tr.drop('time', axis=1)
+    for model in models.values():
+        model.fit(X_tr, y_tr)
+    return models
 
-# Calculate metrics
+models_full = train_models_full()
+models_no_time = train_models_no_time()
+
 def get_results(models, X_test, y_test):
     results = {}
     for name, model in models.items():
