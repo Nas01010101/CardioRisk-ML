@@ -110,12 +110,12 @@ df = load_data()
 
 # Prepare data - WITH and WITHOUT time variable
 X_full = df.drop('DEATH_EVENT', axis=1)
-X_no_time = df.drop(['DEATH_EVENT', 'time'], axis=1)
 y = df['DEATH_EVENT']
 
-# Train/test split
+# Single split, then drop time column for no_time version
 X_train_full, X_test_full, y_train, y_test = train_test_split(X_full, y, test_size=0.2, stratify=y, random_state=42)
-X_train_no_time, X_test_no_time, _, _ = train_test_split(X_no_time, y, test_size=0.2, stratify=y, random_state=42)
+X_train_no_time = X_train_full.drop('time', axis=1)
+X_test_no_time = X_test_full.drop('time', axis=1)
 
 @st.cache_resource
 def train_models(_X_train, _y_train):
