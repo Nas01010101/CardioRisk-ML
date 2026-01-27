@@ -334,6 +334,10 @@ elif page == "Critical Analysis":
         - Mean time (deceased): **{df[df.DEATH_EVENT==1]['time'].mean():.0f} days**
         
         Patients who died have shorter follow-up *by definition*. This is not a predictive feature — it's a consequence of the outcome.
+        
+        **Supporting literature:**
+        - Kaufman et al. (2012): "Leakage in Data Mining" — features correlated with outcome timing cause inflated performance
+        - Kapoor & Narayanan (2022): "Leakage and the Reproducibility Crisis in ML-based Science" — identifies time-related leakage as common issue
         """)
     
     with col2:
