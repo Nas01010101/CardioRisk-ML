@@ -176,7 +176,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # Navigation
-page = st.radio("", ["Study Overview", "Key Findings", "Critical Analysis", "Literature Gaps", "Statistical Analysis (R)"], horizontal=True, label_visibility="collapsed")
+page = st.radio("", ["Study Overview", "Key Findings", "Critical Analysis", "Project Limitations", "Statistical Analysis (R)"], horizontal=True, label_visibility="collapsed")
 
 st.divider()
 
