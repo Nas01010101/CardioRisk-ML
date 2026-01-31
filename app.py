@@ -169,8 +169,9 @@ st.markdown('<p class="subtitle">Heart Failure Mortality Prediction — A Critic
 # Disclaimer
 st.markdown("""
 <div class="disclaimer-box">
-    <strong>Methodological Note:</strong> As always, we take ML analysis on small retrospective datasets with a boat of salt — 
-    a 299-patient single-center cohort cannot reliably generalize, and the time variable leakage inflates reported performance. 
+    <strong>Methodological Note:</strong> Findings from machine learning analyses on small retrospective datasets 
+    should be interpreted with caution. A 299-patient single-center cohort has limited generalizability, and the 
+    inclusion of the time variable may introduce information leakage that inflates reported performance metrics. 
     See Critical Analysis for details.
 </div>
 """, unsafe_allow_html=True)
@@ -513,9 +514,10 @@ elif page == "Statistical Analysis (R)":
     
     st.markdown("""
     <div class="reference-box">
-        This section uses basic statistical tests to understand which clinical factors 
-        differ between patients who survived and those who died. No fancy models here — 
-        just straightforward comparisons and correlations.
+        This section presents descriptive and inferential statistical analyses to characterize 
+        differences in clinical parameters between patients who experienced mortality and those 
+        who survived. These foundational analyses establish the empirical basis for subsequent 
+        predictive modeling.
     </div>
     """, unsafe_allow_html=True)
     
@@ -541,8 +543,9 @@ elif page == "Statistical Analysis (R)":
     st.markdown('<p class="section-header">1. How Do Survivors and Deceased Patients Differ?</p>', unsafe_allow_html=True)
     
     st.markdown("""
-    The plots below show the distribution of key variables, split by outcome. 
-    If the distributions look different, that variable might help predict mortality.
+    The following histograms display the distribution of key clinical variables, stratified by 
+    patient outcome. Divergence between these distributions suggests potential discriminative 
+    value for mortality prediction.
     """)
     
     # Split data
@@ -573,15 +576,15 @@ elif page == "Statistical Analysis (R)":
     st.pyplot(fig)
     plt.close()
     
-    st.caption("Dashed lines show the average for each group. Clear separation = the variable differs between groups.")
+    st.caption("Dashed vertical lines indicate the group mean. Greater separation between means suggests stronger association with outcome.")
     
     # Interpretation
     st.markdown("""
-    **What we see:**
-    - **Age**: Patients who died were older on average
-    - **Ejection Fraction**: Lower values (weaker heart pump) are more common among deceased
-    - **Serum Creatinine**: Higher values (worse kidney function) linked to death  
-    - **Serum Sodium**: Slightly lower in deceased patients, but less dramatic
+    **Clinical Observations:**
+    - **Age**: Patients who experienced mortality were older on average
+    - **Ejection Fraction**: Lower values (reduced ventricular function) are more prevalent among deceased patients
+    - **Serum Creatinine**: Elevated values (indicative of renal impairment) are associated with increased mortality  
+    - **Serum Sodium**: Modestly lower concentrations observed in deceased patients
     """)
     
     st.divider()
@@ -590,10 +593,11 @@ elif page == "Statistical Analysis (R)":
     st.markdown('<p class="section-header">2. Are These Differences Statistically Significant?</p>', unsafe_allow_html=True)
     
     st.markdown("""
-    A difference in averages might just be random chance. Statistical tests tell us 
-    how confident we can be that the difference is real.
+    Observed differences in group means require formal hypothesis testing to determine 
+    whether they represent true population differences or sampling variability. The 
+    Mann-Whitney U test (a non-parametric alternative to the t-test) is applied here.
     
-    **Rule of thumb:** p < 0.05 means "unlikely to be random chance" (statistically significant).
+    **Interpretation threshold:** A p-value < 0.05 is conventionally considered statistically significant.
     """)
     
     # Perform t-tests
@@ -618,9 +622,9 @@ elif page == "Statistical Analysis (R)":
     
     st.markdown("""
     **Interpretation:**
-    - **Age, Ejection Fraction, Serum Creatinine** — Significant differences (reliable predictors)
-    - **Serum Sodium** — Also significant, but the difference is smaller
-    - **Platelets, CPK** — Not statistically significant (less useful for prediction)
+    - **Age, Ejection Fraction, Serum Creatinine** — Statistically significant differences observed (candidate predictors)
+    - **Serum Sodium** — Statistically significant, though with smaller absolute difference
+    - **Platelets, CPK** — No statistically significant difference detected between outcome groups
     """)
     
     st.divider()
@@ -629,7 +633,8 @@ elif page == "Statistical Analysis (R)":
     st.markdown('<p class="section-header">3. Do Binary Risk Factors Matter?</p>', unsafe_allow_html=True)
     
     st.markdown("""
-    For yes/no variables (diabetes, smoking, etc.), we compare mortality rates between groups.
+    For dichotomous clinical variables (e.g., presence or absence of diabetes, smoking history), 
+    mortality rates are compared between groups using chi-square tests of independence.
     """)
     
     binary_vars = ['anaemia', 'diabetes', 'high_blood_pressure', 'sex', 'smoking']
@@ -681,9 +686,10 @@ elif page == "Statistical Analysis (R)":
     
     st.markdown("""
     **Interpretation:**  
-    None of the binary risk factors (diabetes, smoking, etc.) show statistically significant 
-    associations with mortality in this dataset. This doesn't mean they're unimportant — 
-    the sample size (299) may be too small to detect modest effects.
+    None of the dichotomous clinical variables (diabetes, smoking, hypertension) demonstrate 
+    statistically significant associations with mortality in this cohort. However, this finding 
+    should be interpreted cautiously—the limited sample size (n=299) may provide insufficient 
+    statistical power to detect modest effect sizes.
     """)
     
     st.divider()
@@ -692,8 +698,9 @@ elif page == "Statistical Analysis (R)":
     st.markdown('<p class="section-header">4. How Are Variables Related to Each Other?</p>', unsafe_allow_html=True)
     
     st.markdown("""
-    Correlation measures how two variables move together. Values range from -1 (opposite directions) 
-    to +1 (same direction). Values near 0 mean no relationship.
+    Pearson correlation coefficients quantify the linear association between continuous variables. 
+    Values range from -1 (perfect inverse relationship) to +1 (perfect positive relationship), 
+    with values near 0 indicating no linear association.
     """)
     
     # Correlation with death
@@ -717,7 +724,7 @@ elif page == "Statistical Analysis (R)":
     st.pyplot(fig)
     plt.close()
     
-    st.caption("Blue = protective (lower values linked to death), Red = risk factor (higher values linked to death)")
+    st.caption("Blue = negative correlation (protective factor), Red = positive correlation (associated with increased mortality)")
     
     st.markdown("""
     <div class="warning-card">
@@ -728,10 +735,10 @@ elif page == "Statistical Analysis (R)":
     """, unsafe_allow_html=True)
     
     st.markdown("""
-    **Key relationships:**
-    - **Ejection Fraction** (r = -0.27): Higher = better survival (protective)
-    - **Serum Creatinine** (r = +0.29): Higher = worse survival (risk factor)
-    - **Age** (r = +0.25): Older = higher risk
+    **Key Correlations:**
+    - **Ejection Fraction** (r = -0.27): Higher ejection fraction associated with improved survival (protective factor)
+    - **Serum Creatinine** (r = +0.29): Elevated creatinine associated with increased mortality (adverse prognostic indicator)
+    - **Age** (r = +0.25): Advanced age associated with higher mortality risk
     """)
     
     st.divider()
@@ -743,19 +750,19 @@ elif page == "Statistical Analysis (R)":
     <div class="reference-box">
         <strong>What the statistics tell us:</strong><br><br>
         
-        <strong>Strong predictors of mortality:</strong><br>
-        • <strong>Age</strong> — Older patients had higher mortality<br>
-        • <strong>Ejection Fraction</strong> — Lower values (weaker heart) linked to death<br>
-        • <strong>Serum Creatinine</strong> — Higher values (kidney dysfunction) linked to death<br><br>
+        <strong>Variables with significant association with mortality:</strong><br>
+        • <strong>Age</strong> — Advanced age associated with increased mortality<br>
+        • <strong>Ejection Fraction</strong> — Reduced ejection fraction (ventricular dysfunction) associated with mortality<br>
+        • <strong>Serum Creatinine</strong> — Elevated creatinine (renal impairment) associated with mortality<br><br>
         
-        <strong>Weaker or no association:</strong><br>
-        • Diabetes, smoking, high blood pressure — No significant effect in this sample<br>
-        • Platelets, CPK — Not significantly different between groups<br><br>
+        <strong>Variables without statistically significant association:</strong><br>
+        • Diabetes, smoking, hypertension — No significant association detected in this cohort<br>
+        • Platelet count, CPK — No significant difference between outcome groups<br><br>
         
-        <strong>Limitations:</strong><br>
-        • Small sample size (n=299) limits what we can detect<br>
-        • Single hospital in Pakistan — may not generalize elsewhere<br>
-        • Observational data — cannot prove causation
+        <strong>Study Limitations:</strong><br>
+        • Limited sample size (n=299) constrains statistical power<br>
+        • Single-center study (Faisalabad Institute of Cardiology, Pakistan) — external validity uncertain<br>
+        • Observational design — causal inference not possible
     </div>
     """, unsafe_allow_html=True)
 
