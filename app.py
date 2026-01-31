@@ -427,63 +427,49 @@ elif page == "Literature Gaps":
     """)
     
     st.markdown('<div class="finding-card">', unsafe_allow_html=True)
-    st.markdown("### 1. Lack of Survival Analysis Integration")
+    st.markdown("### 1. Primary Limitation: Single-Population Bias")
     st.markdown("""
-    Most studies treat mortality prediction as binary classification, ignoring:
-    - **Time-to-event** information (when death occurs, not just if)
-    - **Censoring** (patients lost to follow-up)
-    - **Competing risks** (death from non-cardiac causes)
+    **The Problem**: Both the original study and this replication rely exclusively on a single cohort from Faisalabad, Pakistan.
     
-    **Better approach**: Cox proportional hazards, Random Survival Forests, or DeepSurv models that account for 
-    the temporal nature of the outcome.
+    **Why this is a limitation**:
+    - **Ethnic Differences**: "Normal" ranges for Serum Creatinine can vary significantly by ethnicity and muscle mass. A threshold of 1.2 mg/dL might be predictive in South Asian populations but less accurate for African or European ancestries.
+    - **Healthcare Context**: Treatment protocols and admission criteria vary globally, which affects the baseline mortality risk.
+    
+    **Future Direction**: The most critical next step is not to change the model, but to **replicate this exact methodology** on diverse datasets (e.g., MIMIC-III in the US, European cohorts) to verify if these specific biomarkers remain predictive across ethnicities.
     """)
     st.markdown('</div>', unsafe_allow_html=True)
     
     st.markdown('<div class="finding-card">', unsafe_allow_html=True)
-    st.markdown("### 2. Clinical Utility Assessment")
+    st.markdown("### 2. Limitation: Clinical Utility Uncertain")
     st.markdown("""
-    Papers routinely report AUC but rarely assess:
-    - **Decision Curve Analysis**: Does the model provide net benefit over treat-all/treat-none strategies?
-    - **Threshold optimization**: What probability cutoff maximizes clinical utility?
-    - **Number Needed to Treat/Screen**: Practical implications for resource allocation
+    **The Problem**: We established that the model can *predict* death (High AUC), but not whether it helps *prevent* it.
     
-    A model with AUC=0.85 may still be clinically useless if it doesn't change management decisions.
+    **Why this is a limitation**:
+    - A high-risk prediction is only useful if there is an intervention available that improves outcomes for that specific risk group.
+    - We have not performed **Decision Curve Analysis (DCA)** to determine the probability threshold where treating patients yields the highest net benefit.
+    
+    **Future Direction**: Evaluate the model using Net Benefit metrics rather than just accuracy.
     """)
     st.markdown('</div>', unsafe_allow_html=True)
     
     st.markdown('<div class="finding-card">', unsafe_allow_html=True)
-    st.markdown("### 3. Calibration Over Discrimination")
+    st.markdown("### 3. Limitation: Calibration Gaps")
     st.markdown("""
-    Clinical decision-making requires **well-calibrated probabilities**, not just good ranking:
-    - If I tell a patient they have 30% risk, does 30% of such patients actually die?
-    - Most ML models are poorly calibrated out-of-the-box
-    - Platt scaling, isotonic regression, or Venn prediction are underutilized
+    **The Problem**: The model ranks patients well (who is at higher risk?), but the predicted probabilities may not reflect reality (60% risk might mean 60% of people die).
     
-    **Brier score** and calibration plots should be standard, not optional.
+    **Why this is a limitation**:
+    - Clinicians need accurate probabilities to counsel patients and allocate resources.
+    
+    **Future Direction**: Apply calibration techniques (Platt scaling, Isotonic regression) to ensure predicted risks match observed mortality rates.
     """)
     st.markdown('</div>', unsafe_allow_html=True)
     
     st.markdown('<div class="finding-card">', unsafe_allow_html=True)
-    st.markdown("### 4. Fairness and Subgroup Analysis")
+    st.markdown("### 4. Methodological Note: Binary vs. Survival")
     st.markdown("""
-    Questions rarely addressed:
-    - Does the model perform equally well for men and women?
-    - Are there age-related biases?
-    - How does performance vary across comorbidity profiles?
+    **The Limitation**: By strictly replicating the original paper's binary classification approach, we inherit its inability to handle "time-to-event" nuances or censoring.
     
-    Aggregate AUC can mask disparities that matter clinically.
-    """)
-    st.markdown('</div>', unsafe_allow_html=True)
-    
-    st.markdown('<div class="finding-card">', unsafe_allow_html=True)
-    st.markdown("### 5. Prospective and Multi-Center Validation")
-    st.markdown("""
-    The vast majority of heart failure ML papers:
-    - Use retrospective, single-center data
-    - Split data randomly (temporal leakage)
-    - Never test on truly external populations
-    
-    **Without prospective validation**, we cannot know if these models generalize to future patients in real clinical settings.
+    **Implication**: While this faithfully reproduces the reference study, a de novo approach would benefit from Survival Analysis (Cox Regression) to predict *how long* a patient survives, rather than just *if* they survive the follow-up period.
     """)
     st.markdown('</div>', unsafe_allow_html=True)
     
