@@ -1,0 +1,6 @@
+[theme]
+base = "light"
+
+[client]
+# Force light theme - disable user's ability to change theme
+toolbarMode = "minimal"
