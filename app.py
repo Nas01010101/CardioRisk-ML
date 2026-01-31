@@ -491,14 +491,7 @@ elif page == "Project Limitations":
     """)
     st.markdown('</div>', unsafe_allow_html=True)
     
-    st.markdown('<p class="section-header">Recommended Reading</p>', unsafe_allow_html=True)
-    
-    st.markdown("""
-    - **Van Calster, B. et al. (2019)**. Calibration: the Achilles heel of predictive analytics. *BMC Medicine*
-    - **Vickers, A. J. & Elkin, E. B. (2006)**. Decision curve analysis. *Medical Decision Making*
-    - **Obermeyer, Z. & Emanuel, E. J. (2016)**. Predicting the Future — Big Data, Machine Learning, and Clinical Medicine. *NEJM*
-    - **Christodoulou, E. et al. (2019)**. A systematic review shows no performance benefit of ML over logistic regression. *JCE*
-    """)
+
 
 # ==================== STATISTICAL ANALYSIS ====================
 elif page == "Statistical Analysis (R)":
