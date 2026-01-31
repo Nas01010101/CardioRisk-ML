@@ -176,7 +176,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # Navigation
-page = st.radio("", ["Study Overview", "Key Findings", "Critical Analysis", "Literature Gaps", "Statistical Analysis (R)"], horizontal=True, label_visibility="collapsed")
+page = st.radio("", ["Study Overview", "Key Findings", "Critical Analysis", "Project Limitations", "Statistical Analysis (R)"], horizontal=True, label_visibility="collapsed")
 
 st.divider()
 
@@ -417,96 +417,79 @@ elif page == "Critical Analysis":
     """)
 
 # ==================== LITERATURE GAPS ====================
-elif page == "Literature Gaps":
+# ==================== PROJECT LIMITATIONS ====================
+elif page == "Project Limitations":
     
-    st.markdown('<p class="section-header">What Is Missing from Current Research</p>', unsafe_allow_html=True)
+    st.markdown('<p class="section-header">Identified Flaws & Future Improvements</p>', unsafe_allow_html=True)
     
     st.markdown("""
-    While the Chicco & Jurman (2020) study contributed to the field, several gaps remain unaddressed in the broader 
-    heart failure ML literature:
+    Through this project, I have identified several critical flaws in my current approach. 
+    To build a truly reliable clinical tool, the following issues need to be addressed:
     """)
     
     st.markdown('<div class="finding-card">', unsafe_allow_html=True)
-    st.markdown("### 1. Lack of Survival Analysis Integration")
+    st.markdown("### 1. Flaw: Classification Instead of Survival Analysis")
     st.markdown("""
-    Most studies treat mortality prediction as binary classification, ignoring:
-    - **Time-to-event** information (when death occurs, not just if)
-    - **Censoring** (patients lost to follow-up)
-    - **Competing risks** (death from non-cardiac causes)
+    **The Problem**: My current model treats death as a simple binary outcome (Yes/No), ignoring *when* it happens.
     
-    **Better approach**: Cox proportional hazards, Random Survival Forests, or DeepSurv models that account for 
-    the temporal nature of the outcome.
+    **Why this is a flaw**:
+    - It loses the richness of time-to-event data.
+    - It handles censored data (patients we lost track of) poorly.
+    
+    **Fix**: Implement **Cox Proportional Hazards** or **Random Survival Forests** to predict survival curves rather than binary labels.
     """)
     st.markdown('</div>', unsafe_allow_html=True)
     
     st.markdown('<div class="finding-card">', unsafe_allow_html=True)
-    st.markdown("### 2. Clinical Utility Assessment")
+    st.markdown("### 2. Flaw: Lack of Calibration")
     st.markdown("""
-    Papers routinely report AUC but rarely assess:
-    - **Decision Curve Analysis**: Does the model provide net benefit over treat-all/treat-none strategies?
-    - **Threshold optimization**: What probability cutoff maximizes clinical utility?
-    - **Number Needed to Treat/Screen**: Practical implications for resource allocation
+    **The Problem**: I trained the models to maximize accuracy and AUC, but I didn't check if the predicted probabilities reflect real risk.
     
-    A model with AUC=0.85 may still be clinically useless if it doesn't change management decisions.
+    **Why this is a flaw**:
+    - A model might say "70% risk" when the real risk is only 30%.
+    - Doctors need calibrated probabilities to make decisions, not just a ranking of who is most likely to die.
+    
+    **Fix**: Assess calibration with **Brier scores** and calibration plots. Apply **Platt scaling** or **Isotonic regression** if needed.
     """)
     st.markdown('</div>', unsafe_allow_html=True)
     
     st.markdown('<div class="finding-card">', unsafe_allow_html=True)
-    st.markdown("### 3. Calibration Over Discrimination")
+    st.markdown("### 3. Flaw: No Clinical Utility Assessment")
     st.markdown("""
-    Clinical decision-making requires **well-calibrated probabilities**, not just good ranking:
-    - If I tell a patient they have 30% risk, does 30% of such patients actually die?
-    - Most ML models are poorly calibrated out-of-the-box
-    - Platt scaling, isotonic regression, or Venn prediction are underutilized
+    **The Problem**: I reported AUC (0.85+), which looks good on paper, but I haven't shown if using this model actually helps patients.
     
-    **Brier score** and calibration plots should be standard, not optional.
+    **Why this is a flaw**:
+    - A model can have high accuracy but still offer no "net benefit" over standard care guidelines.
+    
+    **Fix**: Perform **Decision Curve Analysis (DCA)** to visualize the net benefit across different decision thresholds.
     """)
     st.markdown('</div>', unsafe_allow_html=True)
     
     st.markdown('<div class="finding-card">', unsafe_allow_html=True)
-    st.markdown("### 4. Fairness and Subgroup Analysis")
+    st.markdown("### 4. Flaw: Ignoring Fairness and Bias")
     st.markdown("""
-    Questions rarely addressed:
-    - Does the model perform equally well for men and women?
-    - Are there age-related biases?
-    - How does performance vary across comorbidity profiles?
+    **The Problem**: I haven't checked if the model performs equally well for different groups.
     
-    Aggregate AUC can mask disparities that matter clinically.
+    **Why this is a flaw**:
+    - The model might be very accurate for men but inaccurate for women.
+    - It might rely on proxies for age that bias the results against older patients.
+    
+    **Fix**: Conduct a **subgroup analysis** (by Sex, Age, etc.) and calculate fairness metrics (e.g., Equalized Odds).
     """)
     st.markdown('</div>', unsafe_allow_html=True)
     
     st.markdown('<div class="finding-card">', unsafe_allow_html=True)
-    st.markdown("### 5. Prospective and Multi-Center Validation")
+    st.markdown("### 5. Flaw: Limited Generalization")
     st.markdown("""
-    The vast majority of heart failure ML papers:
-    - Use retrospective, single-center data
-    - Split data randomly (temporal leakage)
-    - Never test on truly external populations
+    **The Problem**: This model was trained on a small dataset (N=299) from a single hospital in Pakistan.
     
-    **Without prospective validation**, we cannot know if these models generalize to future patients in real clinical settings.
+    **Why this is a flaw**:
+    - Medical practices and patient populations vary globally.
+    - There is a high risk that this model will fail completely if tested on patients from a different region.
+    
+    **Fix**: Validate the model on an **external dataset** (from a different hospital/country) before claiming any real-world utility.
     """)
     st.markdown('</div>', unsafe_allow_html=True)
-    
-    st.markdown('<div class="finding-card">', unsafe_allow_html=True)
-    st.markdown("### 6. Interpretability vs. Performance Trade-off")
-    st.markdown("""
-    The push for complex models (XGBoost, neural networks) may be misguided:
-    - Simple logistic regression often performs comparably
-    - Interpretable models are easier to audit for errors
-    - Clinicians trust what they can understand
-    
-    For high-stakes decisions, a slightly less accurate but fully transparent model may be preferable.
-    """)
-    st.markdown('</div>', unsafe_allow_html=True)
-    
-    st.markdown('<p class="section-header">Recommended Reading</p>', unsafe_allow_html=True)
-    
-    st.markdown("""
-    - **Van Calster, B. et al. (2019)**. Calibration: the Achilles heel of predictive analytics. *BMC Medicine*
-    - **Vickers, A. J. & Elkin, E. B. (2006)**. Decision curve analysis. *Medical Decision Making*
-    - **Obermeyer, Z. & Emanuel, E. J. (2016)**. Predicting the Future — Big Data, Machine Learning, and Clinical Medicine. *NEJM*
-    - **Christodoulou, E. et al. (2019)**. A systematic review shows no performance benefit of ML over logistic regression. *JCE*
-    """)
 
 # ==================== STATISTICAL ANALYSIS ====================
 elif page == "Statistical Analysis (R)":
