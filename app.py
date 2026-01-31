@@ -502,338 +502,266 @@ elif page == "Literature Gaps":
     - **Christodoulou, E. et al. (2019)**. A systematic review shows no performance benefit of ML over logistic regression. *JCE*
     """)
 
-# ==================== STATISTICAL ANALYSIS (R) ====================
+# ==================== STATISTICAL ANALYSIS ====================
 elif page == "Statistical Analysis (R)":
     
     import os
-    import json
     from scipy import stats
     
-    r_results_path = "reports/r_analysis_summary.json"
-    results_exist = os.path.exists(r_results_path)
-    
-    if results_exist:
-        with open(r_results_path, 'r') as f:
-            r_summary = json.load(f)
-    
     # ==================== HEADER ====================
-    st.markdown('<p class="section-header">Statistical Analysis Report</p>', unsafe_allow_html=True)
+    st.markdown('<p class="section-header">Statistical Analysis</p>', unsafe_allow_html=True)
     
     st.markdown("""
     <div class="reference-box">
-        This analysis applies survival analysis methods to the Heart Failure Clinical Records dataset, 
-        complementing the machine learning approach with inferential statistics. The primary method 
-        is Cox proportional hazards regression, which quantifies the association between clinical 
-        variables and time-to-death while adjusting for confounding.
+        This section uses basic statistical tests to understand which clinical factors 
+        differ between patients who survived and those who died. No fancy models here — 
+        just straightforward comparisons and correlations.
     </div>
     """, unsafe_allow_html=True)
     
     # Key metrics
-    if results_exist:
-        col1, col2, col3, col4 = st.columns(4)
-        with col1:
-            st.metric("Sample Size", "299")
-        with col2:
-            st.metric("Events (Deaths)", "96")
-        with col3:
-            st.metric("Mortality Rate", f"{r_summary['mortality_rate']}%")
-        with col4:
-            st.metric("Model C-Index", f"{r_summary['cox_multivariate']['concordance']}")
+    n_total = len(df)
+    n_died = df['DEATH_EVENT'].sum()
+    n_survived = n_total - n_died
+    mortality_rate = round(100 * n_died / n_total, 1)
+    
+    col1, col2, col3, col4 = st.columns(4)
+    with col1:
+        st.metric("Total Patients", n_total)
+    with col2:
+        st.metric("Survived", n_survived)
+    with col3:
+        st.metric("Died", n_died)
+    with col4:
+        st.metric("Mortality Rate", f"{mortality_rate}%")
     
     st.divider()
     
-    # ==================== SURVIVAL CURVES ====================
-    st.markdown('<p class="section-header">1. Survival Analysis</p>', unsafe_allow_html=True)
+    # ==================== SECTION 1: DISTRIBUTIONS ====================
+    st.markdown('<p class="section-header">1. How Do Survivors and Deceased Patients Differ?</p>', unsafe_allow_html=True)
     
     st.markdown("""
-    Survival analysis models time-to-event data, accounting for censored observations 
-    (patients still alive at study end). The curves below show survival probability over time.
+    The plots below show the distribution of key variables, split by outcome. 
+    If the distributions look different, that variable might help predict mortality.
     """)
     
-    # Generate Kaplan-Meier style plots
-    df_plot = df.copy()
-    df_plot['ef_group'] = pd.cut(df_plot['ejection_fraction'], 
-                                  bins=[0, 30, 40, 50, 100],
-                                  labels=['Severe (<30%)', 'Moderate (30-40%)', 'Mild (40-50%)', 'Normal (>50%)'])
+    # Split data
+    survived = df[df['DEATH_EVENT'] == 0]
+    died = df[df['DEATH_EVENT'] == 1]
     
-    df_plot['creat_group'] = pd.cut(df_plot['serum_creatinine'], 
-                                     bins=[0, 1.2, 1.5, 2.0, float('inf')],
-                                     labels=['Normal (<1.2)', 'Elevated (1.2-1.5)', 'High (1.5-2.0)', 'Very High (>2.0)'])
+    # Key variables to compare
+    key_vars = ['age', 'ejection_fraction', 'serum_creatinine', 'serum_sodium']
     
-    col1, col2 = st.columns(2)
+    fig, axes = plt.subplots(2, 2, figsize=(12, 8))
+    axes = axes.flatten()
     
-    with col1:
-        st.markdown("**Survival by Ejection Fraction**")
-        fig, ax = plt.subplots(figsize=(7, 5))
-        colors_ef = {'Severe (<30%)': '#C0392B', 'Moderate (30-40%)': '#E67E22', 
-                     'Mild (40-50%)': '#F39C12', 'Normal (>50%)': '#27AE60'}
-        
-        for group in ['Severe (<30%)', 'Moderate (30-40%)', 'Mild (40-50%)', 'Normal (>50%)']:
-            subset = df_plot[df_plot['ef_group'] == group].sort_values('time')
-            if len(subset) == 0:
-                continue
-            n = len(subset)
-            times = sorted(subset['time'].unique())
-            survival = []
-            at_risk = n
-            for t in times:
-                events = len(subset[(subset['time'] == t) & (subset['DEATH_EVENT'] == 1)])
-                at_risk -= events
-                survival.append(at_risk / n)
-            ax.step(times, survival, where='post', label=group, color=colors_ef.get(group, '#888'), linewidth=2)
-        
-        ax.set_xlabel('Follow-up Time (days)')
-        ax.set_ylabel('Survival Probability')
-        ax.set_ylim(0, 1.05)
-        ax.set_xlim(0, 300)
-        ax.legend(loc='lower left', fontsize=9, framealpha=0.9)
-        ax.axhline(y=0.5, color='gray', linestyle='--', alpha=0.3)
+    for i, var in enumerate(key_vars):
+        ax = axes[i]
+        ax.hist(survived[var], bins=20, alpha=0.6, label='Survived', color='#27AE60', density=True)
+        ax.hist(died[var], bins=20, alpha=0.6, label='Died', color='#E74C3C', density=True)
+        ax.set_xlabel(var.replace('_', ' ').title())
+        ax.set_ylabel('Density')
+        ax.legend()
         ax.spines['top'].set_visible(False)
         ax.spines['right'].set_visible(False)
-        ax.grid(axis='y', alpha=0.3)
-        plt.tight_layout()
-        st.pyplot(fig)
-        plt.close()
-        if results_exist:
-            st.caption(f"Log-rank p = {r_summary['survival_analysis']['logrank_ef_pvalue']}")
-    
-    with col2:
-        st.markdown("**Survival by Serum Creatinine**")
-        fig, ax = plt.subplots(figsize=(7, 5))
-        colors_cr = {'Normal (<1.2)': '#27AE60', 'Elevated (1.2-1.5)': '#F39C12', 
-                     'High (1.5-2.0)': '#E67E22', 'Very High (>2.0)': '#C0392B'}
         
-        for group in ['Normal (<1.2)', 'Elevated (1.2-1.5)', 'High (1.5-2.0)', 'Very High (>2.0)']:
-            subset = df_plot[df_plot['creat_group'] == group].sort_values('time')
-            if len(subset) == 0:
-                continue
-            n = len(subset)
-            times = sorted(subset['time'].unique())
-            survival = []
-            at_risk = n
-            for t in times:
-                events = len(subset[(subset['time'] == t) & (subset['DEATH_EVENT'] == 1)])
-                at_risk -= events
-                survival.append(at_risk / n)
-            ax.step(times, survival, where='post', label=group, color=colors_cr.get(group, '#888'), linewidth=2)
-        
-        ax.set_xlabel('Follow-up Time (days)')
-        ax.set_ylabel('Survival Probability')
-        ax.set_ylim(0, 1.05)
-        ax.set_xlim(0, 300)
-        ax.legend(loc='lower left', fontsize=9, framealpha=0.9)
-        ax.axhline(y=0.5, color='gray', linestyle='--', alpha=0.3)
-        ax.spines['top'].set_visible(False)
-        ax.spines['right'].set_visible(False)
-        ax.grid(axis='y', alpha=0.3)
-        plt.tight_layout()
-        st.pyplot(fig)
-        plt.close()
-        if results_exist:
-            st.caption(f"Log-rank p = {r_summary['survival_analysis']['logrank_creat_pvalue']}")
+        # Add means as vertical lines
+        ax.axvline(survived[var].mean(), color='#27AE60', linestyle='--', linewidth=2, alpha=0.8)
+        ax.axvline(died[var].mean(), color='#E74C3C', linestyle='--', linewidth=2, alpha=0.8)
     
-    with st.expander("Reading the Curves"):
-        st.markdown("""
-        - **Y-axis**: Probability of survival (1 = all alive, 0 = none alive)
-        - **Steeper drops**: Higher mortality rate at that time
-        - **Dashed line**: 50% survival threshold
-        - **Diverging curves**: The grouping variable affects prognosis
-        """)
+    plt.tight_layout()
+    st.pyplot(fig)
+    plt.close()
+    
+    st.caption("Dashed lines show the average for each group. Clear separation = the variable differs between groups.")
+    
+    # Interpretation
+    st.markdown("""
+    **What we see:**
+    - **Age**: Patients who died were older on average
+    - **Ejection Fraction**: Lower values (weaker heart pump) are more common among deceased
+    - **Serum Creatinine**: Higher values (worse kidney function) linked to death  
+    - **Serum Sodium**: Slightly lower in deceased patients, but less dramatic
+    """)
     
     st.divider()
     
-    # ==================== COX REGRESSION ====================
-    st.markdown('<p class="section-header">2. Cox Proportional Hazards Model</p>', unsafe_allow_html=True)
+    # ==================== SECTION 2: STATISTICAL TESTS ====================
+    st.markdown('<p class="section-header">2. Are These Differences Statistically Significant?</p>', unsafe_allow_html=True)
     
     st.markdown("""
-    Cox regression estimates the **hazard ratio (HR)** for each variable—the relative 
-    risk of death per unit change, adjusted for other variables.
+    A difference in averages might just be random chance. Statistical tests tell us 
+    how confident we can be that the difference is real.
+    
+    **Rule of thumb:** p < 0.05 means "unlikely to be random chance" (statistically significant).
     """)
     
-    # Forest plot from CSV data
-    cox_uni_path = "reports/cox_univariate.csv"
-    if os.path.exists(cox_uni_path):
-        cox_uni_df = pd.read_csv(cox_uni_path)
+    # Perform t-tests
+    test_results = []
+    for var in ['age', 'ejection_fraction', 'serum_creatinine', 'serum_sodium', 'platelets', 'creatinine_phosphokinase']:
+        survived_vals = survived[var].dropna()
+        died_vals = died[var].dropna()
         
-        st.markdown("**Hazard Ratios (Univariate Analysis)**")
-        fig, ax = plt.subplots(figsize=(10, 6))
+        stat, p_value = stats.mannwhitneyu(survived_vals, died_vals, alternative='two-sided')
         
-        y_pos = range(len(cox_uni_df))
-        for i, row in cox_uni_df.iterrows():
-            hr, ci_low, ci_high = row['HR'], row['CI_Lower'], row['CI_Upper']
-            sig = row['Significant'] == '***'
-            color = '#2C3E50' if sig else '#BDC3C7'
-            ax.plot([ci_low, ci_high], [i, i], color=color, linewidth=2.5, alpha=0.8)
-            ax.scatter(hr, i, color=color, s=100, zorder=5, edgecolors='white', linewidth=1)
-        
-        ax.axvline(x=1, color='#E74C3C', linestyle='--', linewidth=1.5)
-        ax.set_yticks(y_pos)
-        ax.set_yticklabels(cox_uni_df['Variable'], fontsize=10)
-        ax.set_xlabel('Hazard Ratio (log scale)')
-        ax.set_xscale('log')
-        ax.set_xlim(0.8, 2.0)
-        ax.spines['top'].set_visible(False)
-        ax.spines['right'].set_visible(False)
-        ax.text(0.82, len(cox_uni_df)-0.5, '← Protective', fontsize=9, color='#27AE60', va='center')
-        ax.text(1.4, len(cox_uni_df)-0.5, 'Risk →', fontsize=9, color='#E74C3C', va='center')
-        plt.tight_layout()
-        st.pyplot(fig)
-        plt.close()
-        st.caption("Dark = statistically significant (p < 0.05). Dashed line = HR of 1 (no effect).")
+        test_results.append({
+            'Variable': var.replace('_', ' ').title(),
+            'Survived (mean)': round(survived_vals.mean(), 1),
+            'Died (mean)': round(died_vals.mean(), 1),
+            'Difference': round(died_vals.mean() - survived_vals.mean(), 2),
+            'p-value': f"{p_value:.4f}" if p_value >= 0.0001 else "<0.0001",
+            'Significant?': '✓ Yes' if p_value < 0.05 else '✗ No'
+        })
     
-    # Multivariate table
-    cox_multi_path = "reports/cox_multivariate.csv"
-    if os.path.exists(cox_multi_path):
-        st.markdown("**Multivariate Model**")
-        cox_multi_df = pd.read_csv(cox_multi_path)
-        
-        col1, col2 = st.columns([2, 1])
-        with col1:
-            st.dataframe(cox_multi_df, use_container_width=True, hide_index=True)
-        with col2:
-            if results_exist:
-                st.markdown(f"""
-                **C-Index: {r_summary['cox_multivariate']['concordance']}**
-                
-                The model correctly ranks patient pairs by risk 73% of the time.
-                """)
+    results_df = pd.DataFrame(test_results)
+    st.dataframe(results_df, use_container_width=True, hide_index=True)
     
-    with st.expander("Interpreting Hazard Ratios"):
-        st.markdown("""
-        | HR | Interpretation |
-        |----|----------------|
-        | 1.0 | No association |
-        | 1.35 | 35% higher risk |
-        | 0.95 | 5% risk reduction per unit |
-        
-        95% CI crossing 1.0 = not statistically significant.
-        """)
+    st.markdown("""
+    **Interpretation:**
+    - **Age, Ejection Fraction, Serum Creatinine** — Significant differences (reliable predictors)
+    - **Serum Sodium** — Also significant, but the difference is smaller
+    - **Platelets, CPK** — Not statistically significant (less useful for prediction)
+    """)
     
     st.divider()
     
-    # ==================== GROUP COMPARISONS ====================
-    st.markdown('<p class="section-header">3. Group Comparisons</p>', unsafe_allow_html=True)
+    # ==================== SECTION 3: CATEGORICAL VARIABLES ====================
+    st.markdown('<p class="section-header">3. Do Binary Risk Factors Matter?</p>', unsafe_allow_html=True)
     
-    cont_tests_path = "reports/continuous_tests.csv"
-    if os.path.exists(cont_tests_path):
-        cont_df = pd.read_csv(cont_tests_path)
+    st.markdown("""
+    For yes/no variables (diabetes, smoking, etc.), we compare mortality rates between groups.
+    """)
+    
+    binary_vars = ['anaemia', 'diabetes', 'high_blood_pressure', 'sex', 'smoking']
+    
+    fig, ax = plt.subplots(figsize=(10, 5))
+    
+    mortality_rates = []
+    labels = []
+    colors = []
+    
+    for var in binary_vars:
+        rate_0 = df[df[var] == 0]['DEATH_EVENT'].mean() * 100
+        rate_1 = df[df[var] == 1]['DEATH_EVENT'].mean() * 100
         
-        fig, ax = plt.subplots(figsize=(10, 5))
-        vars_to_plot = ['age', 'ejection_fraction', 'serum_creatinine', 'serum_sodium']
-        plot_data = cont_df[cont_df['Variable'].isin(vars_to_plot)]
-        
-        x = np.arange(len(plot_data))
-        width = 0.35
-        
-        bars1 = ax.bar(x - width/2, plot_data['Mean_Survived'], width, 
-                       label='Survived', color='#27AE60', alpha=0.85)
-        bars2 = ax.bar(x + width/2, plot_data['Mean_Died'], width, 
-                       label='Deceased', color='#E74C3C', alpha=0.85)
-        
-        ax.set_ylabel('Mean Value')
-        ax.set_xticks(x)
-        ax.set_xticklabels(plot_data['Variable'].values, fontsize=10)
-        ax.legend(framealpha=0.9)
-        ax.spines['top'].set_visible(False)
-        ax.spines['right'].set_visible(False)
-        
-        for i, row in enumerate(plot_data.itertuples()):
-            if row.Significant == '***':
-                max_val = max(row.Mean_Survived, row.Mean_Died)
-                ax.text(i, max_val * 1.02, '*', ha='center', fontsize=14, fontweight='bold')
-        
-        plt.tight_layout()
-        st.pyplot(fig)
-        plt.close()
-        st.caption("* indicates statistically significant difference (p < 0.05)")
+        labels.extend([f'{var.replace("_", " ").title()}\n(No)', f'{var.replace("_", " ").title()}\n(Yes)'])
+        mortality_rates.extend([rate_0, rate_1])
+        colors.extend(['#3498DB', '#E74C3C'])
+    
+    x = np.arange(len(labels))
+    bars = ax.bar(x, mortality_rates, color=colors, alpha=0.8)
+    ax.set_ylabel('Mortality Rate (%)')
+    ax.set_xticks(x)
+    ax.set_xticklabels(labels, fontsize=9)
+    ax.axhline(y=mortality_rate, color='gray', linestyle='--', alpha=0.7, label=f'Overall: {mortality_rate}%')
+    ax.legend()
+    ax.spines['top'].set_visible(False)
+    ax.spines['right'].set_visible(False)
+    ax.set_ylim(0, 50)
+    
+    plt.tight_layout()
+    st.pyplot(fig)
+    plt.close()
+    
+    st.caption("Blue = factor absent, Red = factor present. Dashed line = overall mortality rate.")
+    
+    # Chi-square tests
+    chi_results = []
+    for var in binary_vars:
+        contingency = pd.crosstab(df[var], df['DEATH_EVENT'])
+        chi2, p_value, dof, expected = stats.chi2_contingency(contingency)
+        chi_results.append({
+            'Variable': var.replace('_', ' ').title(),
+            'p-value': f"{p_value:.3f}",
+            'Significant?': '✓ Yes' if p_value < 0.05 else '✗ No'
+        })
+    
+    chi_df = pd.DataFrame(chi_results)
+    st.dataframe(chi_df, use_container_width=True, hide_index=True)
+    
+    st.markdown("""
+    **Interpretation:**  
+    None of the binary risk factors (diabetes, smoking, etc.) show statistically significant 
+    associations with mortality in this dataset. This doesn't mean they're unimportant — 
+    the sample size (299) may be too small to detect modest effects.
+    """)
     
     st.divider()
     
-    # ==================== CORRELATIONS ====================
-    st.markdown('<p class="section-header">4. Variable Correlations</p>', unsafe_allow_html=True)
+    # ==================== SECTION 4: CORRELATIONS ====================
+    st.markdown('<p class="section-header">4. How Are Variables Related to Each Other?</p>', unsafe_allow_html=True)
     
-    corr_matrix_path = "reports/correlation_matrix.csv"
-    if os.path.exists(corr_matrix_path):
-        corr_df = pd.read_csv(corr_matrix_path, index_col=0)
-        
-        if 'DEATH_EVENT' in corr_df.columns:
-            death_corr = corr_df['DEATH_EVENT'].drop('DEATH_EVENT').sort_values()
-            
-            fig, ax = plt.subplots(figsize=(9, 5))
-            colors = ['#E74C3C' if x > 0 else '#3498DB' for x in death_corr.values]
-            bars = ax.barh(range(len(death_corr)), death_corr.values, color=colors, alpha=0.85)
-            ax.set_yticks(range(len(death_corr)))
-            ax.set_yticklabels(death_corr.index, fontsize=10)
-            ax.axvline(x=0, color='black', linewidth=0.8)
-            ax.axvline(x=-0.3, color='gray', linestyle=':', alpha=0.5)
-            ax.axvline(x=0.3, color='gray', linestyle=':', alpha=0.5)
-            ax.set_xlabel('Correlation with Mortality')
-            ax.set_xlim(-0.6, 0.4)
-            ax.spines['top'].set_visible(False)
-            ax.spines['right'].set_visible(False)
-            plt.tight_layout()
-            st.pyplot(fig)
-            plt.close()
-            st.caption("Blue = protective, Red = risk factor. Dotted lines = weak/moderate threshold.")
-            
-            st.markdown("""
-            <div class="warning-card">
-                <strong>Note on 'time':</strong> The strong negative correlation is an artifact—patients 
-                who died have shorter follow-up because death ended observation. This is not causal.
-            </div>
-            """, unsafe_allow_html=True)
+    st.markdown("""
+    Correlation measures how two variables move together. Values range from -1 (opposite directions) 
+    to +1 (same direction). Values near 0 mean no relationship.
+    """)
     
-    st.divider()
+    # Correlation with death
+    numeric_cols = ['age', 'ejection_fraction', 'serum_creatinine', 'serum_sodium', 
+                    'platelets', 'creatinine_phosphokinase', 'time']
     
-    # ==================== METHODOLOGY ====================
-    st.markdown('<p class="section-header">5. Methodology</p>', unsafe_allow_html=True)
+    correlations = df[numeric_cols + ['DEATH_EVENT']].corr()['DEATH_EVENT'].drop('DEATH_EVENT').sort_values()
     
-    col1, col2 = st.columns(2)
-    with col1:
-        st.markdown("""
-        **Methods**
-        - Kaplan-Meier survival estimation
-        - Log-rank test for group comparisons
-        - Cox proportional hazards regression
-        - Wilcoxon rank-sum & Chi-square tests
-        """)
-    with col2:
-        st.markdown("""
-        **Limitations**
-        - Small sample (n=299)
-        - Single-center (Pakistan)
-        - No external validation
-        - Observational design
-        """)
+    fig, ax = plt.subplots(figsize=(10, 5))
+    colors = ['#E74C3C' if x > 0 else '#3498DB' for x in correlations.values]
+    bars = ax.barh(range(len(correlations)), correlations.values, color=colors, alpha=0.85)
+    ax.set_yticks(range(len(correlations)))
+    ax.set_yticklabels([c.replace('_', ' ').title() for c in correlations.index])
+    ax.axvline(x=0, color='black', linewidth=0.8)
+    ax.set_xlabel('Correlation with Death')
+    ax.set_xlim(-0.6, 0.4)
+    ax.spines['top'].set_visible(False)
+    ax.spines['right'].set_visible(False)
     
-    with st.expander("R Code"):
-        st.code('''library(survival)
-surv_obj <- Surv(time = df$time, event = df$DEATH_EVENT)
-cox_model <- coxph(surv_obj ~ age + ejection_fraction + 
-                   serum_creatinine + serum_sodium, data = df)
-summary(cox_model)''', language='r')
+    plt.tight_layout()
+    st.pyplot(fig)
+    plt.close()
+    
+    st.caption("Blue = protective (lower values linked to death), Red = risk factor (higher values linked to death)")
+    
+    st.markdown("""
+    <div class="warning-card">
+        <strong>⚠️ Warning about "Time":</strong> The strong negative correlation with time is misleading. 
+        Patients who died have shorter follow-up because death ended their observation — 
+        this is not a useful predictor.
+    </div>
+    """, unsafe_allow_html=True)
+    
+    st.markdown("""
+    **Key relationships:**
+    - **Ejection Fraction** (r = -0.27): Higher = better survival (protective)
+    - **Serum Creatinine** (r = +0.29): Higher = worse survival (risk factor)
+    - **Age** (r = +0.25): Older = higher risk
+    """)
     
     st.divider()
     
-    # ==================== SUMMARY ====================
+    # ==================== SECTION 5: SUMMARY ====================
     st.markdown('<p class="section-header">Summary</p>', unsafe_allow_html=True)
     
-    if results_exist:
-        st.markdown(f"""
-        <div class="reference-box">
-            <strong>Key Findings</strong><br><br>
-            Three variables independently predict mortality:<br>
-            • <strong>Age</strong> — ~4% increased hazard per year<br>
-            • <strong>Ejection Fraction</strong> — ~5% reduced hazard per percentage point<br>
-            • <strong>Serum Creatinine</strong> — HR ≈ 1.36 per mg/dL<br><br>
-            Model C-Index: {r_summary['cox_multivariate']['concordance']} (moderate discrimination)<br><br>
-            <em>Results should be interpreted with caution given sample size limitations.</em>
-        </div>
-        """, unsafe_allow_html=True)
-    else:
-        st.info("Run R analysis: `Rscript r_analysis/statistical_analysis.R data/heart_failure_clinical_records_dataset.csv reports/`")
+    st.markdown(f"""
+    <div class="reference-box">
+        <strong>What the statistics tell us:</strong><br><br>
+        
+        <strong>Strong predictors of mortality:</strong><br>
+        • <strong>Age</strong> — Older patients had higher mortality<br>
+        • <strong>Ejection Fraction</strong> — Lower values (weaker heart) linked to death<br>
+        • <strong>Serum Creatinine</strong> — Higher values (kidney dysfunction) linked to death<br><br>
+        
+        <strong>Weaker or no association:</strong><br>
+        • Diabetes, smoking, high blood pressure — No significant effect in this sample<br>
+        • Platelets, CPK — Not significantly different between groups<br><br>
+        
+        <strong>Limitations:</strong><br>
+        • Small sample size (n=299) limits what we can detect<br>
+        • Single hospital in Pakistan — may not generalize elsewhere<br>
+        • Observational data — cannot prove causation
+    </div>
+    """, unsafe_allow_html=True)
 
 
+
+    
 # Footer
 st.markdown("""
 <div class="footer">

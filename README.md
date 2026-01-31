@@ -22,7 +22,7 @@ The Streamlit dashboard includes:
 - **Key Findings** — Model performance comparison and feature importance
 - **Critical Analysis** — Detailed examination of data leakage and methodology issues
 - **Literature Gaps** — Academic context and limitations of current research
-- **Statistical Analysis (R)** — Cox proportional hazards regression, Kaplan-Meier survival curves, and formal hypothesis testing
+- **Statistical Analysis** — Distribution comparisons, hypothesis tests, and correlations with clear interpretations
 
 ## Installation
 
