@@ -169,10 +169,9 @@ st.markdown('<p class="subtitle">Heart Failure Mortality Prediction — A Critic
 # Disclaimer
 st.markdown("""
 <div class="disclaimer-box">
-    <strong>Methodological Note:</strong> Findings from machine learning analyses on small retrospective datasets 
-    should be interpreted with caution. A 299-patient single-center cohort has limited generalizability, and the 
-    inclusion of the time variable may introduce information leakage that inflates reported performance metrics. 
-    See Critical Analysis for details.
+    <strong>A Student's Note:</strong> This project is an exploration of machine learning on a small medical dataset. 
+    I've identified some interesting patterns, particularly regarding the "time" variable, which I discuss 
+    further in the Critical Analysis section.
 </div>
 """, unsafe_allow_html=True)
 
@@ -270,9 +269,9 @@ elif page == "Key Findings":
         """)
     
     if importance.index[0] == 'time':
-        st.markdown("**Verdict**: ⚠️ **Partially Confirmed with Caveat** — Time dominates, but this is problematic (see Critical Analysis).")
+        st.markdown("**Observation**: Time appears as the dominant feature. This is an interesting finding to explore further (see Critical Analysis).")
     else:
-        st.markdown("**Verdict**: ✓ **Confirmed** — Serum creatinine and ejection fraction rank highly.")
+        st.markdown("**Observation**: Serum creatinine and ejection fraction rank highly, consistent with the original study.")
     st.markdown('</div>', unsafe_allow_html=True)
     
     # Finding 2: Model Performance
@@ -319,11 +318,11 @@ elif page == "Critical Analysis":
     st.markdown('<p class="section-header">On the Time Variable</p>', unsafe_allow_html=True)
     
     st.markdown("""
-    One aspect of this dataset worth examining is the "time" variable — the follow-up period in days. 
-    I believe it may introduce data leakage when used as a classification feature. Here's my reasoning:
+    One aspect of this dataset that stood out to me is the "time" variable. 
+    As an undergraduate student exploring this data, I wonder if it functions differently than the clinical features.
     """)
     
-    st.markdown('<p class="section-header">The Thesis</p>', unsafe_allow_html=True)
+    st.markdown('<p class="section-header">A Hypothesis</p>', unsafe_allow_html=True)
     
     st.markdown(f"""
     The "time" variable records how long each patient was observed. In this dataset:
@@ -333,7 +332,7 @@ elif page == "Critical Analysis":
     - Mean follow-up for deceased: **{df[df.DEATH_EVENT==1]['time'].mean():.0f} days**
     
     Patients who died have shorter follow-up periods. If a patient dies early, their observation ends early. 
-    This makes "time" more of a consequence of the outcome than a predictor of it.
+    This suggests to me that "time" might be connected to the outcome in a way that differs from standard predictors.
     """)
     
     st.markdown('<p class="section-header">Supporting Evidence</p>', unsafe_allow_html=True)
@@ -531,9 +530,9 @@ elif page == "Statistical Analysis (R)":
     with col1:
         st.metric("Total Patients", n_total)
     with col2:
-        st.metric("Survived", n_survived)
+        st.metric("Survivors", n_survived)
     with col3:
-        st.metric("Died", n_died)
+        st.metric("Deceased", n_died)
     with col4:
         st.metric("Mortality Rate", f"{mortality_rate}%")
     
@@ -560,8 +559,8 @@ elif page == "Statistical Analysis (R)":
     
     for i, var in enumerate(key_vars):
         ax = axes[i]
-        ax.hist(survived[var], bins=20, alpha=0.6, label='Survived', color='#27AE60', density=True)
-        ax.hist(died[var], bins=20, alpha=0.6, label='Died', color='#E74C3C', density=True)
+        ax.hist(survived[var], bins=20, alpha=0.6, label='Survivors', color='#27AE60', density=True)
+        ax.hist(died[var], bins=20, alpha=0.6, label='Deceased', color='#E74C3C', density=True)
         ax.set_xlabel(var.replace('_', ' ').title())
         ax.set_ylabel('Density')
         ax.legend()
@@ -610,11 +609,11 @@ elif page == "Statistical Analysis (R)":
         
         test_results.append({
             'Variable': var.replace('_', ' ').title(),
-            'Survived (mean)': round(survived_vals.mean(), 1),
-            'Died (mean)': round(died_vals.mean(), 1),
+            'Survivors (mean)': round(survived_vals.mean(), 1),
+            'Deceased (mean)': round(died_vals.mean(), 1),
             'Difference': round(died_vals.mean() - survived_vals.mean(), 2),
             'p-value': f"{p_value:.4f}" if p_value >= 0.0001 else "<0.0001",
-            'Significant?': '✓ Yes' if p_value < 0.05 else '✗ No'
+            'Significant?': 'Yes' if p_value < 0.05 else 'No'
         })
     
     results_df = pd.DataFrame(test_results)
@@ -678,7 +677,7 @@ elif page == "Statistical Analysis (R)":
         chi_results.append({
             'Variable': var.replace('_', ' ').title(),
             'p-value': f"{p_value:.3f}",
-            'Significant?': '✓ Yes' if p_value < 0.05 else '✗ No'
+            'Significant?': 'Yes' if p_value < 0.05 else 'No'
         })
     
     chi_df = pd.DataFrame(chi_results)
@@ -728,9 +727,8 @@ elif page == "Statistical Analysis (R)":
     
     st.markdown("""
     <div class="warning-card">
-        <strong>⚠️ Warning about "Time":</strong> The strong negative correlation with time is misleading. 
-        Patients who died have shorter follow-up because death ended their observation — 
-        this is not a useful predictor.
+        <strong>Note on "Time":</strong> The strong negative correlation with time is worth noting. 
+        It could be related to the fact that patients who died naturally had shorter follow-up periods.
     </div>
     """, unsafe_allow_html=True)
     
