@@ -501,7 +501,7 @@ elif page == "Statistical Analysis (R)":
     from scipy import stats
     
     # ==================== HEADER ====================
-    st.markdown('<p class="section-header">Statistical Analysis</p>', unsafe_allow_html=True)
+    st.markdown('<p class="section-header">Statistical Analysis & Context</p>', unsafe_allow_html=True)
     
     st.markdown("""
     <div class="reference-box">
@@ -528,6 +528,44 @@ elif page == "Statistical Analysis (R)":
     with col4:
         st.metric("Mortality Rate", f"{mortality_rate}%")
     
+    st.divider()
+
+    # ==================== SECTION 0: COMPARATIVE CONTEXT ====================
+    st.markdown('<p class="section-header">0. Global Context: How Does This Cohort Compare?</p>', unsafe_allow_html=True)
+    
+    st.markdown("""
+    To understand the generalizability of these findings, it is instructive to compare the baseline characteristics 
+    of this cohort (Faisalabad, Pakistan) with those from a major Western clinical trial (PARAGON-HF).
+    
+    *Note: Reference values are approximate, sourced from Solomon et al. (2019).*
+    """)
+    
+    # Create comparison dataframe manually since we don't have the raw external data
+    comparison_data = {
+        'Metric': ['Mean Age (years)', 'Mean Ejection Fraction (%)', 'Mean Serum Creatinine (mg/dL)', 'Sex (% Female)'],
+        'Current Cohort (Pakistan)': [round(df['age'].mean(), 1), round(df['ejection_fraction'].mean(), 1), round(df['serum_creatinine'].mean(), 2), f"{round(df[df.sex==0].shape[0]/len(df)*100, 1)}%"],
+        'Western Reference (PARAGON-HF)': ['73.0', '57.0', '1.10', '51.7%']
+    }
+    comp_df = pd.DataFrame(comparison_data)
+    st.dataframe(comp_df, use_container_width=True, hide_index=True)
+    
+    st.markdown("""
+    <div class="finding-card">
+        <strong>Observation 1: The Age Gap</strong><br>
+        The mean age in this dataset (~60 years) is significantly lower than typical Western heart failure cohorts (~73 years). 
+        Literature suggests that heart failure in South Asian populations may manifest earlier due to different risk factors 
+        (e.g., earlier onset of coronary artery disease), which fundamentally limits the ability to apply this model 
+        to geriatric Western populations without recalibration.
+    </div>
+    
+    <div class="finding-card">
+        <strong>Observation 2: Renal Function Baseline</strong><br>
+        Average creatinine levels here appear higher than in reference trials. This is critical because "normal" creatinine 
+        ranges are dependent on muscle mass and ethnicity. A threshold of 1.5 mg/dL might indicate severe failure in one 
+        population but moderate impairment in another.
+    </div>
+    """, unsafe_allow_html=True)
+
     st.divider()
     
     # ==================== SECTION 1: DISTRIBUTIONS ====================
