@@ -318,11 +318,11 @@ elif page == "Critical Analysis":
     st.markdown('<p class="section-header">On the Time Variable</p>', unsafe_allow_html=True)
     
     st.markdown("""
-    One aspect of this dataset that stood out to me is the "time" variable. 
-    As an undergraduate student exploring this data, I wonder if it functions differently than the clinical features.
+    One aspect of this dataset that merits a closer look is the "time" variable. 
+    It is important to consider whether including this variable in a predictive model introduces logical inconsistencies regarding causality.
     """)
     
-    st.markdown('<p class="section-header">A Hypothesis</p>', unsafe_allow_html=True)
+    st.markdown('<p class="section-header">Target Leakage Hypothesis</p>', unsafe_allow_html=True)
     
     st.markdown(f"""
     The "time" variable records how long each patient was observed. In this dataset:
@@ -332,7 +332,11 @@ elif page == "Critical Analysis":
     - Mean follow-up for deceased: **{df[df.DEATH_EVENT==1]['time'].mean():.0f} days**
     
     Patients who died have shorter follow-up periods. If a patient dies early, their observation ends early. 
-    This suggests to me that "time" might be connected to the outcome in a way that differs from standard predictors.
+    This relationship suggests that "time" is not a neutral predictor but is intrinsically linked to the target label itself.
+    
+    Logically, for a prospective prediction model (one used when a patient is first admitted), the total follow-up time 
+    would be unknown. Including it creates a form of **target leakage**—using information that would not be available 
+    at the time of inference.
     """)
     
     st.markdown('<p class="section-header">Supporting Evidence</p>', unsafe_allow_html=True)
@@ -349,7 +353,7 @@ elif page == "Critical Analysis":
         | XGBoost | {results_full['XGBoost']['auc']:.3f} | {results_no_time['XGBoost']['auc']:.3f} |
         
         The drop in AUC when removing time suggests the models 
-        were partially relying on this variable.
+        were partially relying on this variable to make predictions.
         """)
     
     with col2:
@@ -386,11 +390,13 @@ elif page == "Critical Analysis":
     rather than the actual observed time-to-event. If patients were assigned to different monitoring schedules, 
     this would be a legitimate baseline feature. The dataset documentation is ambiguous on this point.
     
-    **2. Survival analysis handles time differently**
+    **2. Survival analysis vs. Classification**
     
-    In Cox regression or Kaplan-Meier analysis, time-to-event is part of the outcome definition, not a feature. 
-    The original paper used stratified logistic regression by month, which partially addresses the issue. 
-    My concern applies specifically to treating time as a classification feature.
+    In survival analysis (like Cox Proportional Hazards), the outcome is a pair: *(time, event)*. 
+    Here, the problem is framed as binary classification (survived/deceased). In survival analysis, 
+    **right-censoring** (when a patient survives beyond the study end) is handled explicitly. 
+    In binary classification, mixing time-to-event into the features can confuse the model, 
+    as the "time" value means something different for survivors (censored time) vs. deceased (event time).
     
     **3. Different goals: explanation vs. prediction**
     
