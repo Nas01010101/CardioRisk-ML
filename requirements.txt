@@ -10,3 +10,12 @@ yellowbrick
 jupyter
 ipykernel
 streamlit
+
+# RAG dependencies
+google-generativeai
+faiss-cpu
+langchain
+langchain-google-genai
+langchain-community
+biopython
+tiktoken

@@ -176,7 +176,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # Navigation
-page = st.radio("", ["Study Overview", "Key Findings", "Critical Analysis", "Project Limitations", "Statistical Analysis (R)"], horizontal=True, label_visibility="collapsed")
+page = st.radio("", ["Study Overview", "Key Findings", "Critical Analysis", "Project Limitations", "Statistical Analysis (R)", "Research Assistant 🔬"], horizontal=True, label_visibility="collapsed")
 
 st.divider()
 
@@ -794,6 +794,180 @@ elif page == "Statistical Analysis (R)":
     """, unsafe_allow_html=True)
 
 
+# ==================== RESEARCH ASSISTANT (RAG) ====================
+elif page == "Research Assistant 🔬":
+    
+    import os
+    
+    st.markdown('<p class="section-header">Research Assistant</p>', unsafe_allow_html=True)
+    
+    st.markdown("""
+    <div class="reference-box">
+        <strong>AI-Powered Literature Q&A</strong><br><br>
+        Ask questions about cardiovascular risk, heart failure prediction, and clinical ML — 
+        answers are grounded in a curated collection of peer-reviewed research papers from PubMed Central.
+        Every answer includes source citations so you can verify the evidence.
+    </div>
+    """, unsafe_allow_html=True)
+    
+    # Check for API key
+    api_key = os.environ.get("GOOGLE_API_KEY") or os.environ.get("GEMINI_API_KEY")
+    
+    if not api_key:
+        st.markdown("""
+        <div class="warning-card">
+            <strong>⚠️ Setup Required: API Key</strong><br><br>
+            The Research Assistant needs a Google Gemini API key to generate answers.<br><br>
+            <strong>Steps:</strong><br>
+            1. Get a free API key at <a href="https://aistudio.google.com/apikey" target="_blank">Google AI Studio</a><br>
+            2. Set the environment variable before running the app:<br><br>
+            <code>export GOOGLE_API_KEY="your-key-here"</code><br>
+            <code>streamlit run app.py</code>
+        </div>
+        """, unsafe_allow_html=True)
+        
+        # Allow entering key directly in the app for convenience
+        with st.expander("Or enter your API key here (session only)"):
+            temp_key = st.text_input("Gemini API Key", type="password", key="gemini_key_input")
+            if temp_key:
+                os.environ["GOOGLE_API_KEY"] = temp_key
+                api_key = temp_key
+                st.success("API key set for this session! You can now use the Research Assistant.")
+                st.rerun()
+    
+    if api_key:
+        # Check if vector store exists
+        from pathlib import Path
+        vector_store_path = Path("data/vector_store")
+        papers_path = Path("data/papers")
+        
+        if not vector_store_path.exists():
+            st.markdown('<p class="section-header">Build Knowledge Base</p>', unsafe_allow_html=True)
+            
+            st.markdown("""
+            The Research Assistant needs to download and index cardiovascular research papers 
+            before it can answer questions. This is a one-time setup.
+            """)
+            
+            col1, col2 = st.columns(2)
+            with col1:
+                num_papers = st.slider("Number of papers to fetch", min_value=10, max_value=150, value=100, step=10)
+            with col2:
+                st.markdown("")
+                st.markdown("")
+                build_button = st.button("📚 Build Knowledge Base", type="primary", use_container_width=True)
+            
+            if build_button:
+                with st.status("Building knowledge base...", expanded=True) as status:
+                    st.write("🔍 Fetching papers from PubMed Central...")
+                    try:
+                        from src.rag.paper_fetcher import fetch_papers
+                        papers = fetch_papers(max_papers=num_papers)
+                        st.write(f"✅ Fetched {len(papers)} papers")
+                        
+                        st.write("🧮 Building vector embeddings...")
+                        from src.rag.vector_store import build_store
+                        build_store()
+                        st.write("✅ Vector store built successfully!")
+                        
+                        status.update(label="Knowledge base ready!", state="complete")
+                        st.rerun()
+                    except Exception as e:
+                        status.update(label="Error building knowledge base", state="error")
+                        st.error(f"Error: {str(e)}")
+        else:
+            # Knowledge base is ready — show the Q&A interface
+            try:
+                from src.rag.vector_store import get_store_stats
+                from src.rag.query_engine import ask_question, EXAMPLE_QUESTIONS
+                
+                stats = get_store_stats()
+                
+                # Show stats
+                col1, col2, col3 = st.columns(3)
+                with col1:
+                    st.markdown('<p class="metric-label">Papers Indexed</p>', unsafe_allow_html=True)
+                    st.markdown(f'<p class="metric-value">{stats.get("num_papers", 0)}</p>', unsafe_allow_html=True)
+                with col2:
+                    st.markdown('<p class="metric-label">Text Chunks</p>', unsafe_allow_html=True)
+                    st.markdown(f'<p class="metric-value">{stats.get("num_chunks", 0)}</p>', unsafe_allow_html=True)
+                with col3:
+                    st.markdown('<p class="metric-label">Source</p>', unsafe_allow_html=True)
+                    st.markdown('<p class="metric-value" style="font-size: 1.2rem;">PubMed Central</p>', unsafe_allow_html=True)
+                
+                st.divider()
+                
+                # Example questions
+                st.markdown("**Try an example question:**")
+                example_cols = st.columns(4)
+                selected_example = None
+                
+                for i, q in enumerate(EXAMPLE_QUESTIONS[:8]):
+                    col_idx = i % 4
+                    with example_cols[col_idx]:
+                        if st.button(q[:50] + ("..." if len(q) > 50 else ""), key=f"example_{i}", use_container_width=True):
+                            selected_example = q
+                
+                st.markdown("")
+                
+                # Question input
+                user_question = st.text_input(
+                    "Ask a question about cardiovascular risk research:",
+                    value=selected_example or "",
+                    placeholder="e.g., What role does ejection fraction play in predicting heart failure outcomes?",
+                    key="rag_question_input"
+                )
+                
+                if user_question:
+                    with st.spinner("Searching papers and generating answer..."):
+                        try:
+                            result = ask_question(user_question)
+                            
+                            # Display answer
+                            st.markdown('<p class="section-header">Answer</p>', unsafe_allow_html=True)
+                            st.markdown(result["answer"])
+                            
+                            # Display sources
+                            st.markdown('<p class="section-header">Sources</p>', unsafe_allow_html=True)
+                            for src in result["sources"]:
+                                authors_str = src.get('authors', 'Unknown')
+                                if isinstance(authors_str, list):
+                                    authors_str = ', '.join(authors_str)
+                                st.markdown(f"""
+                                <div class="finding-card">
+                                    <strong>{src['title']}</strong><br>
+                                    <span style="color: #64748b;">{authors_str} | {src['journal']} ({src['year']}) | 
+                                    <a href="https://www.ncbi.nlm.nih.gov/pmc/articles/PMC{src['pmc_id']}/" target="_blank">PMC{src['pmc_id']}</a></span>
+                                </div>
+                                """, unsafe_allow_html=True)
+                            
+                            # Expandable retrieved chunks
+                            with st.expander(f"📄 View Retrieved Paper Excerpts ({len(result['retrieved_docs'])} chunks)"):
+                                for i, doc in enumerate(result["retrieved_docs"], 1):
+                                    st.markdown(f"**Chunk {i}** — {doc.metadata.get('title', 'Unknown')[:60]}...")
+                                    st.text(doc.page_content[:500] + ("..." if len(doc.page_content) > 500 else ""))
+                                    st.divider()
+                        except Exception as e:
+                            st.error(f"Error generating answer: {str(e)}")
+                
+                # Rebuild option
+                with st.expander("⚙️ Knowledge Base Management"):
+                    st.markdown(f"""**Indexed Papers:** {stats.get('num_papers', 0)} papers, {stats.get('num_chunks', 0)} chunks""")
+                    if st.button("🔄 Rebuild Knowledge Base", key="rebuild_kb"):
+                        import shutil
+                        if vector_store_path.exists():
+                            shutil.rmtree(vector_store_path)
+                        if papers_path.exists():
+                            shutil.rmtree(papers_path)
+                        st.rerun()
+            except Exception as e:
+                st.error(f"Error loading Research Assistant: {str(e)}")
+                st.markdown("Try rebuilding the knowledge base using the button below.")
+                if st.button("🔄 Reset & Rebuild"):
+                    import shutil
+                    if vector_store_path.exists():
+                        shutil.rmtree(vector_store_path)
+                    st.rerun()
 
     
 # Footer
